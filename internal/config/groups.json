@@ -1,0 +1,13 @@
+{
+  "work_dir": "~/Downloads",
+  "groups": [
+    {
+      "prefix": "AdManager Reporting",
+      "output": "raw.csv"
+    },
+    {
+      "prefix": "Revenue per AdUnit",
+      "output": "raw-revenue.csv"
+    }
+  ]
+}

@@ -29,32 +29,55 @@ go test ./...           # Run all tests (if any exist)
 
 ## Code Architecture
 
-The application is structured as a single-file Go program with these key components:
+The application uses a modular package structure with clear separation of concerns:
 
-### Core Data Structure
-- `Group` struct defines file processing groups with prefix patterns and output filenames
-- Two predefined groups: "AdManager Reporting" → `raw.csv` and "Revenue per AdUnit" → `raw-revenue.csv`
+### Package Structure
+```
+internal/
+├── config/          # Configuration management with embedded JSON
+├── processor/       # Main processing orchestration
+├── merger/          # CSV merging functionality
+├── detector/        # Duplicate detection logic
+└── filesystem/      # File system operations
+```
+
+### Core Components
+- **Config Package**: Manages group definitions via embedded JSON configuration
+- **Processor Package**: Orchestrates the complete processing pipeline
+- **Merger Package**: Handles CSV file merging with chronological sorting
+- **Detector Package**: Implements duplicate detection using MD5 hashing
+- **Filesystem Package**: Abstracts file operations and path handling
 
 ### Processing Pipeline
-1. **File Discovery**: `findFiles()` searches ~/Downloads for files matching group prefixes
-2. **Duplicate Detection**: `hasDuplicateContent()` uses MD5 hashing to identify duplicate files
-3. **Chronological Sorting**: Files are sorted by date extracted from the first data row
-4. **Merging**: `mergeFiles()` combines CSV files, skipping headers from subsequent files
-5. **Cleanup**: `deleteFiles()` removes source files after successful merging
+1. **Configuration Loading**: Embedded JSON config loaded via `go:embed`
+2. **File Discovery**: Find files matching group prefixes in work directory
+3. **Duplicate Detection**: MD5 hash comparison to identify duplicate files
+4. **Chronological Sorting**: Files sorted by date extracted from first CSV row
+5. **Merging**: CSV files combined, skipping headers from subsequent files
+6. **Cleanup**: Source files removed after successful merging
 
-### Key Functions
-- `processPattern()`: Main processing logic for each group
-- `readFirstDate()`: Extracts date from first CSV row for sorting
-- `deleteFiles()`: Cleanup function that removes source files after successful merging
+### Key Types
+- `config.Group`: Defines file processing groups with prefix patterns and output filenames
+- `processor.ProcessingResult`: Contains detailed results including timing and error information
+- Interfaces for testability: Each component can be easily mocked for unit testing
 
 ## File Processing Behavior
 
-- Works exclusively in ~/Downloads directory
+- Works in configurable directory (defaults to ~/Downloads)
 - Skips header rows when merging CSV files
 - Prints first 10 characters of second row (date) for verification
 - Handles errors gracefully and continues processing other groups
 - Uses buffered I/O for efficient file operations
-- **Automatically deletes source files after successful merging** - merged files are removed from Downloads
+- **Automatically deletes source files after successful merging** - merged files are removed from work directory
+- Provides detailed processing results including timing and error information
+
+## Configuration
+
+Groups are defined in `internal/config/groups.json` and embedded at compile time:
+- **AdManager Reporting** → `raw.csv`
+- **Revenue per AdUnit** → `raw-revenue.csv`
+
+To modify groups, edit `internal/config/groups.json` and rebuild the application.
 
 ## Dependencies
 
