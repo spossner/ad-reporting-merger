@@ -2,58 +2,38 @@ package config
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadConfig(t *testing.T) {
 	cfg, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	if cfg == nil {
-		t.Fatal("Config is nil")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
 
 	groups := cfg.GetGroups()
-	if len(groups) != 2 {
-		t.Errorf("Expected 2 groups, got %d", len(groups))
-	}
+	assert.Len(t, groups, 2)
 
 	// Check first group
-	if groups[0].Prefix != "AdManager Reporting" {
-		t.Errorf("Expected first group prefix to be 'AdManager Reporting', got '%s'", groups[0].Prefix)
-	}
-
-	if groups[0].Output != "raw.csv" {
-		t.Errorf("Expected first group output to be 'raw.csv', got '%s'", groups[0].Output)
-	}
+	assert.Equal(t, "AdManager Reporting", groups[0].Prefix)
+	assert.Equal(t, "raw.csv", groups[0].Output)
 
 	// Check second group
-	if groups[1].Prefix != "Revenue per AdUnit" {
-		t.Errorf("Expected second group prefix to be 'Revenue per AdUnit', got '%s'", groups[1].Prefix)
-	}
-
-	if groups[1].Output != "raw-revenue.csv" {
-		t.Errorf("Expected second group output to be 'raw-revenue.csv', got '%s'", groups[1].Output)
-	}
+	assert.Equal(t, "Revenue per AdUnit", groups[1].Prefix)
+	assert.Equal(t, "raw-revenue.csv", groups[1].Output)
 }
 
 func TestGetWorkDir(t *testing.T) {
 	cfg, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
+	require.NoError(t, err)
 
 	workDir := cfg.GetWorkDir()
-	if workDir != "~/Downloads" {
-		t.Errorf("Expected work dir to be '~/Downloads', got '%s'", workDir)
-	}
+	assert.Equal(t, "~/Downloads", workDir)
 }
 
 func TestGetWorkDirDefault(t *testing.T) {
 	cfg := &Config{} // Empty config
 	workDir := cfg.GetWorkDir()
-	if workDir != "~/Downloads" {
-		t.Errorf("Expected default work dir to be '~/Downloads', got '%s'", workDir)
-	}
+	assert.Equal(t, "~/Downloads", workDir)
 }

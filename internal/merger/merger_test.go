@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMergeFiles(t *testing.T) {
@@ -26,64 +29,43 @@ func TestMergeFiles(t *testing.T) {
 	content3 := "Date,Value\n2025-01-03,300\n2025-01-03,350\n"
 
 	err = os.WriteFile(file1, []byte(content1), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create file1: %v", err)
-	}
+	require.NoError(t, err)
 
 	err = os.WriteFile(file2, []byte(content2), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create file2: %v", err)
-	}
+	require.NoError(t, err)
 
 	err = os.WriteFile(file3, []byte(content3), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create file3: %v", err)
-	}
+	require.NoError(t, err)
 
 	merger := NewCSVMerger()
 
 	t.Run("merge files", func(t *testing.T) {
 		err = merger.MergeFiles([]string{file1, file2, file3}, output)
-		if err != nil {
-			t.Fatalf("Failed to merge files: %v", err)
-		}
+		require.NoError(t, err)
 
 		// Read output file
 		outputContent, err := os.ReadFile(output)
-		if err != nil {
-			t.Fatalf("Failed to read output file: %v", err)
-		}
+		require.NoError(t, err)
 
 		outputStr := string(outputContent)
 		lines := strings.Split(strings.TrimSpace(outputStr), "\n")
 
 		// Should have 6 lines (2 from each file, headers skipped)
-		if len(lines) != 6 {
-			t.Errorf("Expected 6 lines, got %d", len(lines))
-		}
+		assert.Len(t, lines, 6)
 
 		// Check that data is in chronological order
-		if !strings.HasPrefix(lines[0], "2025-01-01") {
-			t.Errorf("Expected first line to start with 2025-01-01, got %s", lines[0])
-		}
-
-		if !strings.HasPrefix(lines[4], "2025-01-03") {
-			t.Errorf("Expected fifth line to start with 2025-01-03, got %s", lines[4])
-		}
+		assert.True(t, strings.HasPrefix(lines[0], "2025-01-01"), "Expected first line to start with 2025-01-01, got %s", lines[0])
+		assert.True(t, strings.HasPrefix(lines[4], "2025-01-03"), "Expected fifth line to start with 2025-01-03, got %s", lines[4])
 	})
 
 	t.Run("empty file list", func(t *testing.T) {
 		err = merger.MergeFiles([]string{}, output)
-		if err == nil {
-			t.Error("Expected error for empty file list")
-		}
+		assert.Error(t, err, "Expected error for empty file list")
 	})
 
 	t.Run("nonexistent file", func(t *testing.T) {
 		err = merger.MergeFiles([]string{"nonexistent.csv"}, output)
-		if err == nil {
-			t.Error("Expected error for nonexistent file")
-		}
+		assert.Error(t, err, "Expected error for nonexistent file")
 	})
 }
 
@@ -99,23 +81,17 @@ func TestReadFirstDate(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.csv")
 	content := "Date,Value\n2025-01-01,100\n2025-01-02,200\n"
 	err = os.WriteFile(testFile, []byte(content), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
+	require.NoError(t, err)
 
 	merger := NewCSVMerger()
 
 	t.Run("read first date", func(t *testing.T) {
 		date := merger.readFirstDate(testFile)
-		if date != "2025-01-01" {
-			t.Errorf("Expected first date to be 2025-01-01, got %s", date)
-		}
+		assert.Equal(t, "2025-01-01", date)
 	})
 
 	t.Run("nonexistent file", func(t *testing.T) {
 		date := merger.readFirstDate("nonexistent.csv")
-		if date != "" {
-			t.Errorf("Expected empty string for nonexistent file, got %s", date)
-		}
+		assert.Empty(t, date, "Expected empty string for nonexistent file")
 	})
 }

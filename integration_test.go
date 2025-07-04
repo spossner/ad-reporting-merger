@@ -9,6 +9,8 @@ import (
 	"github.com/spossner/ad-reporting-merger/internal/config"
 	"github.com/spossner/ad-reporting-merger/internal/filesystem"
 	"github.com/spossner/ad-reporting-merger/internal/processor"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIntegration(t *testing.T) {
@@ -21,9 +23,7 @@ func TestIntegration(t *testing.T) {
 
 	// Setup file operations
 	fileOps, err := filesystem.NewFileOperations(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create file operations: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Get absolute path to testdata
 	wd, err := os.Getwd()
@@ -34,9 +34,7 @@ func TestIntegration(t *testing.T) {
 
 	// Copy test files to temp directory
 	err = fileOps.CopyTestFiles(testDataSource, tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to copy test files: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Save current directory
 	originalDir, _ := os.Getwd()
@@ -44,15 +42,11 @@ func TestIntegration(t *testing.T) {
 
 	// Change to test directory
 	err = fileOps.ChangeToWorkDir()
-	if err != nil {
-		t.Fatalf("Failed to change to work dir: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Load config
 	cfg, err := config.LoadConfig()
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Create processor
 	proc := processor.NewProcessor(fileOps)
@@ -61,34 +55,21 @@ func TestIntegration(t *testing.T) {
 	results := proc.ProcessAllGroups(cfg.GetGroups())
 
 	// Verify results
-	if len(results) != 2 {
-		t.Errorf("Expected 2 results, got %d", len(results))
-	}
+	assert.Len(t, results, 2)
 
 	for _, result := range results {
-		if result.Error != nil {
-			t.Errorf("Expected no error for group %s, got %v", result.Group.Prefix, result.Error)
-		}
-
-		if result.FilesFound != 3 {
-			t.Errorf("Expected 3 files found for group %s, got %d", result.Group.Prefix, result.FilesFound)
-		}
-
-		if result.FilesMerged != 3 {
-			t.Errorf("Expected 3 files merged for group %s, got %d", result.Group.Prefix, result.FilesMerged)
-		}
+		assert.NoError(t, result.Error, "Expected no error for group %s", result.Group.Prefix)
+		assert.Equal(t, 3, result.FilesFound, "Expected 3 files found for group %s", result.Group.Prefix)
+		assert.Equal(t, 3, result.FilesMerged, "Expected 3 files merged for group %s", result.Group.Prefix)
 
 		// Check output file exists
 		outputPath := filepath.Join(tmpDir, result.OutputFile)
 		_, err := os.Stat(outputPath)
-		if err != nil {
-			t.Errorf("Output file %s should exist: %v", result.OutputFile, err)
-		}
+		assert.NoError(t, err, "Output file %s should exist", result.OutputFile)
 
 		// Verify output content
 		content, err := os.ReadFile(outputPath)
-		if err != nil {
-			t.Errorf("Failed to read output file %s: %v", result.OutputFile, err)
+		if !assert.NoError(t, err, "Failed to read output file %s", result.OutputFile) {
 			continue
 		}
 
@@ -96,18 +77,11 @@ func TestIntegration(t *testing.T) {
 		lines := strings.Split(strings.TrimSpace(contentStr), "\n")
 
 		// Should have 9 lines (3 files × 3 lines each, minus headers)
-		if len(lines) != 9 {
-			t.Errorf("Expected 9 lines in output file %s, got %d", result.OutputFile, len(lines))
-		}
+		assert.Len(t, lines, 9, "Expected 9 lines in output file %s", result.OutputFile)
 
 		// Check chronological order
-		if !strings.HasPrefix(lines[0], "2025-01-01") {
-			t.Errorf("Expected first line to start with 2025-01-01 in %s", result.OutputFile)
-		}
-
-		if !strings.HasPrefix(lines[8], "2025-01-03") {
-			t.Errorf("Expected last line to start with 2025-01-03 in %s", result.OutputFile)
-		}
+		assert.True(t, strings.HasPrefix(lines[0], "2025-01-01"), "Expected first line to start with 2025-01-01 in %s", result.OutputFile)
+		assert.True(t, strings.HasPrefix(lines[8], "2025-01-03"), "Expected last line to start with 2025-01-03 in %s", result.OutputFile)
 	}
 
 	// Verify source files were deleted
@@ -124,9 +98,7 @@ func TestIntegration(t *testing.T) {
 		}
 	}
 
-	if sourceFileCount != 0 {
-		t.Errorf("Expected all source files to be deleted, but found %d", sourceFileCount)
-	}
+	assert.Equal(t, 0, sourceFileCount, "Expected all source files to be deleted")
 }
 
 func TestIntegrationWithTestSetup(t *testing.T) {
@@ -142,9 +114,7 @@ func TestIntegrationWithTestSetup(t *testing.T) {
 
 	// Setup file operations
 	fileOps, err := filesystem.NewFileOperations(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create file operations: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Get absolute path to testdata
 	wd, err := os.Getwd()
@@ -155,29 +125,17 @@ func TestIntegrationWithTestSetup(t *testing.T) {
 
 	// Copy test files to temp directory (preserving originals)
 	err = fileOps.CopyTestFiles(testDataSource, tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to copy test files: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify original test files still exist
 	originalFiles, err := os.ReadDir(testDataSource)
-	if err != nil {
-		t.Fatalf("Failed to read test data source: %v", err)
-	}
-
-	if len(originalFiles) == 0 {
-		t.Error("Original test files should still exist")
-	}
+	require.NoError(t, err)
+	assert.NotEmpty(t, originalFiles, "Original test files should still exist")
 
 	// Verify copied files exist
 	copiedFiles, err := os.ReadDir(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to read temp dir: %v", err)
-	}
-
-	if len(copiedFiles) != len(originalFiles) {
-		t.Errorf("Expected %d copied files, got %d", len(originalFiles), len(copiedFiles))
-	}
+	require.NoError(t, err)
+	assert.Len(t, copiedFiles, len(originalFiles), "Expected same number of copied files as originals")
 
 	t.Logf("Successfully copied %d test files to %s", len(copiedFiles), tmpDir)
 	t.Logf("Original test files preserved in %s", testDataSource)

@@ -7,6 +7,8 @@ import (
 
 	"github.com/spossner/ad-reporting-merger/internal/config"
 	"github.com/spossner/ad-reporting-merger/internal/filesystem"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestProcessGroup(t *testing.T) {
@@ -25,20 +27,14 @@ func TestProcessGroup(t *testing.T) {
 	content2 := "Date,Value\n2025-01-02,200\n2025-01-02,250\n"
 
 	err = os.WriteFile(file1, []byte(content1), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create file1: %v", err)
-	}
+	require.NoError(t, err)
 
 	err = os.WriteFile(file2, []byte(content2), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create file2: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Setup processor
 	fileOps, err := filesystem.NewFileOperations(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create file operations: %v", err)
-	}
+	require.NoError(t, err)
 
 	processor := NewProcessor(fileOps)
 
@@ -48,9 +44,7 @@ func TestProcessGroup(t *testing.T) {
 
 	// Change to test directory
 	err = fileOps.ChangeToWorkDir()
-	if err != nil {
-		t.Fatalf("Failed to change to work dir: %v", err)
-	}
+	require.NoError(t, err)
 
 	group := config.Group{
 		Prefix: "AdManager Reporting",
@@ -60,35 +54,21 @@ func TestProcessGroup(t *testing.T) {
 	t.Run("successful processing", func(t *testing.T) {
 		result := processor.ProcessGroup(group)
 		
-		if result.Error != nil {
-			t.Errorf("Expected no error, got %v", result.Error)
-		}
-
-		if result.FilesFound != 2 {
-			t.Errorf("Expected 2 files found, got %d", result.FilesFound)
-		}
-
-		if result.FilesMerged != 2 {
-			t.Errorf("Expected 2 files merged, got %d", result.FilesMerged)
-		}
+		assert.NoError(t, result.Error)
+		assert.Equal(t, 2, result.FilesFound)
+		assert.Equal(t, 2, result.FilesMerged)
 
 		// Check output file exists
 		outputPath := filepath.Join(tmpDir, "test-output.csv")
 		_, err := os.Stat(outputPath)
-		if err != nil {
-			t.Errorf("Output file should exist: %v", err)
-		}
+		assert.NoError(t, err, "Output file should exist")
 
 		// Check source files were deleted
 		_, err = os.Stat(file1)
-		if err == nil {
-			t.Error("Source file1 should have been deleted")
-		}
+		assert.Error(t, err, "Source file1 should have been deleted")
 
 		_, err = os.Stat(file2)
-		if err == nil {
-			t.Error("Source file2 should have been deleted")
-		}
+		assert.Error(t, err, "Source file2 should have been deleted")
 	})
 }
 
@@ -107,20 +87,14 @@ func TestProcessGroupNoDuplicates(t *testing.T) {
 	content := "Date,Value\n2025-01-01,100\n" // Same content
 
 	err = os.WriteFile(file1, []byte(content), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create file1: %v", err)
-	}
+	require.NoError(t, err)
 
 	err = os.WriteFile(file2, []byte(content), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create file2: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Setup processor
 	fileOps, err := filesystem.NewFileOperations(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create file operations: %v", err)
-	}
+	require.NoError(t, err)
 
 	processor := NewProcessor(fileOps)
 
@@ -130,9 +104,7 @@ func TestProcessGroupNoDuplicates(t *testing.T) {
 
 	// Change to test directory
 	err = fileOps.ChangeToWorkDir()
-	if err != nil {
-		t.Fatalf("Failed to change to work dir: %v", err)
-	}
+	require.NoError(t, err)
 
 	group := config.Group{
 		Prefix: "AdManager Reporting",
@@ -142,17 +114,9 @@ func TestProcessGroupNoDuplicates(t *testing.T) {
 	t.Run("duplicate detection", func(t *testing.T) {
 		result := processor.ProcessGroup(group)
 		
-		if result.Error == nil {
-			t.Error("Expected error for duplicate files")
-		}
-
-		if result.FilesFound != 2 {
-			t.Errorf("Expected 2 files found, got %d", result.FilesFound)
-		}
-
-		if result.FilesMerged != 0 {
-			t.Errorf("Expected 0 files merged due to duplicates, got %d", result.FilesMerged)
-		}
+		assert.Error(t, result.Error, "Expected error for duplicate files")
+		assert.Equal(t, 2, result.FilesFound)
+		assert.Equal(t, 0, result.FilesMerged, "Expected 0 files merged due to duplicates")
 	})
 }
 
@@ -166,9 +130,7 @@ func TestProcessAllGroups(t *testing.T) {
 
 	// Setup processor
 	fileOps, err := filesystem.NewFileOperations(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create file operations: %v", err)
-	}
+	require.NoError(t, err)
 
 	processor := NewProcessor(fileOps)
 
@@ -178,9 +140,7 @@ func TestProcessAllGroups(t *testing.T) {
 
 	// Change to test directory
 	err = fileOps.ChangeToWorkDir()
-	if err != nil {
-		t.Fatalf("Failed to change to work dir: %v", err)
-	}
+	require.NoError(t, err)
 
 	groups := []config.Group{
 		{Prefix: "AdManager Reporting", Output: "test1.csv"},
@@ -190,15 +150,11 @@ func TestProcessAllGroups(t *testing.T) {
 	t.Run("process all groups", func(t *testing.T) {
 		results := processor.ProcessAllGroups(groups)
 		
-		if len(results) != 2 {
-			t.Errorf("Expected 2 results, got %d", len(results))
-		}
+		assert.Len(t, results, 2)
 
 		// Both should have errors since no files exist
 		for i, result := range results {
-			if result.Error == nil {
-				t.Errorf("Expected error for group %d (no files)", i)
-			}
+			assert.Error(t, result.Error, "Expected error for group %d (no files)", i)
 		}
 	})
 }
