@@ -1,6 +1,8 @@
 package filesystem
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +46,47 @@ func (f *FileOperations) DeleteFiles(files []string) error {
 		}
 	}
 	return nil
+}
+
+// CopyTestFiles copies test files from source to destination, preserving originals
+func (f *FileOperations) CopyTestFiles(sourceDir, destDir string) error {
+	entries, err := os.ReadDir(sourceDir)
+	if err != nil {
+		return fmt.Errorf("failed to read source directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		sourcePath := filepath.Join(sourceDir, entry.Name())
+		destPath := filepath.Join(destDir, entry.Name())
+
+		err := f.copyFile(sourcePath, destPath)
+		if err != nil {
+			return fmt.Errorf("failed to copy file %s: %w", entry.Name(), err)
+		}
+	}
+
+	return nil
+}
+
+func (f *FileOperations) copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	return err
 }
 
 func expandPath(path string) (string, error) {
