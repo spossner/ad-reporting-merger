@@ -24,7 +24,9 @@ go mod tidy             # Clean up dependencies
 
 ### Testing
 ```bash
-go test ./...           # Run all tests (if any exist)
+go test ./...           # Run all tests
+go test -v ./...        # Run tests with verbose output
+go test ./... -cover    # Run tests with coverage report
 ```
 
 ## Code Architecture
@@ -58,31 +60,67 @@ internal/
 
 ### Key Types
 - `config.Group`: Defines file processing groups with prefix patterns and output filenames
-- `processor.ProcessingResult`: Contains detailed results including timing and error information
+- `config.Config`: Main configuration structure with groups and work directory settings
+- `processor.ProcessingResult`: Contains detailed results including timing, error information, and dates found
 - Interfaces for testability: Each component can be easily mocked for unit testing
+
+### Testing Infrastructure
+- Comprehensive test suite using Testify assertion library
+- Integration tests with preserved test data in `testdata/` directory
+- Unit tests for all major components (config, processor, merger, detector, filesystem)
+- Test data includes source CSV files and expected output files
 
 ## File Processing Behavior
 
 - Works in configurable directory (defaults to ~/Downloads)
 - Skips header rows when merging CSV files
-- Prints first 10 characters of second row (date) for verification
+- Extracts and displays dates from processed files for verification
 - Handles errors gracefully and continues processing other groups
 - Uses buffered I/O for efficient file operations
 - **Automatically deletes source files after successful merging** - merged files are removed from work directory
-- Provides detailed processing results including timing and error information
+- Provides detailed processing results including timing, file counts, dates found, and error information
+- Performs duplicate detection using MD5 hashing before merging
+- Sorts files chronologically based on date information in CSV content
 
 ## Configuration
 
-Groups are defined in `internal/config/groups.json` and embedded at compile time:
+Groups and settings are defined in `internal/config/groups.json` and embedded at compile time using `go:embed`:
+
+### Current Configuration
+- **Work Directory**: `~/Downloads` (configurable via `work_dir` field)
 - **AdManager Reporting** → `raw.csv`
 - **Revenue per AdUnit** → `raw-revenue.csv`
 
-To modify groups, edit `internal/config/groups.json` and rebuild the application.
+### Configuration Structure
+```json
+{
+  "work_dir": "~/Downloads",
+  "groups": [
+    {
+      "prefix": "AdManager Reporting",
+      "output": "raw.csv"
+    },
+    {
+      "prefix": "Revenue per AdUnit", 
+      "output": "raw-revenue.csv"
+    }
+  ]
+}
+```
+
+To modify configuration, edit `internal/config/groups.json` and rebuild the application.
 
 ## Dependencies
 
-The project uses only Go standard library packages:
+The project primarily uses Go standard library with minimal external dependencies:
+
+### Standard Library Packages
 - `bufio`, `crypto/md5`, `encoding/csv` for file processing
 - `os`, `path/filepath` for file system operations
 - `fmt`, `log` for output and error handling
 - `sort`, `strings` for data manipulation
+- `encoding/json` for configuration parsing
+- `time` for performance timing
+
+### External Dependencies
+- `github.com/stretchr/testify v1.10.0` - Testing framework for assertions and test utilities
