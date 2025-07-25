@@ -14,15 +14,16 @@ type ProcessingResult struct {
 	Group       config.Group
 	FilesFound  int
 	FilesMerged int
+	DatesFound  []string
 	OutputFile  string
 	Duration    time.Duration
 	Error       error
 }
 
 type Processor struct {
-	fileOps   *filesystem.FileOperations
-	detector  *detector.DuplicateDetector
-	merger    *merger.CSVMerger
+	fileOps  *filesystem.FileOperations
+	detector *detector.DuplicateDetector
+	merger   *merger.CSVMerger
 }
 
 func NewProcessor(fileOps *filesystem.FileOperations) *Processor {
@@ -68,7 +69,7 @@ func (p *Processor) ProcessGroup(group config.Group) *ProcessingResult {
 		return result
 	}
 
-	err = p.merger.MergeFiles(files, group.Output)
+	dates, err := p.merger.MergeFiles(files, group.Output)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to merge files: %w", err)
 		result.Duration = time.Since(start)
@@ -76,6 +77,7 @@ func (p *Processor) ProcessGroup(group config.Group) *ProcessingResult {
 	}
 
 	result.FilesMerged = len(files)
+	result.DatesFound = dates
 
 	// Clean up source files
 	err = p.fileOps.DeleteFiles(files)

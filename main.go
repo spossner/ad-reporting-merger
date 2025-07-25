@@ -41,7 +41,10 @@ func main() {
 			fmt.Printf("Error: %v\n", result.Error)
 			continue
 		}
-		fmt.Printf("Merged group: %s -> %s (Duration: %v)\n", 
+		for _, date := range result.DatesFound {
+			fmt.Printf("  %s\n", date)
+		}
+		fmt.Printf("Merged group: %s -> %s (Duration: %v)\n",
 			result.Group.Prefix, result.OutputFile, result.Duration)
 	}
 }

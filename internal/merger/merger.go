@@ -14,9 +14,9 @@ func NewCSVMerger() *CSVMerger {
 	return &CSVMerger{}
 }
 
-func (m *CSVMerger) MergeFiles(files []string, output string) error {
+func (m *CSVMerger) MergeFiles(files []string, output string) ([]string, error) {
 	if len(files) == 0 {
-		return fmt.Errorf("no files to merge")
+		return nil, fmt.Errorf("no files to merge")
 	}
 
 	// Sort files by the first date in each file
@@ -28,19 +28,20 @@ func (m *CSVMerger) MergeFiles(files []string, output string) error {
 
 	out, err := os.Create(output)
 	if err != nil {
-		return fmt.Errorf("unable to create output file: %w", err)
+		return nil, fmt.Errorf("unable to create output file: %w", err)
 	}
 	defer out.Close()
 
 	writer := bufio.NewWriter(out)
 	defer writer.Flush()
 
+	dates := make([]string, 0, len(files))
 	for _, file := range files {
 		f, err := os.Open(file)
 		if err != nil {
-			return fmt.Errorf("unable to open file %s: %w", file, err)
+			return nil, fmt.Errorf("unable to open file %s: %w", file, err)
 		}
-		
+
 		scanner := bufio.NewScanner(f)
 		var line int
 		for scanner.Scan() {
@@ -50,18 +51,18 @@ func (m *CSVMerger) MergeFiles(files []string, output string) error {
 			}
 			row := scanner.Text()
 			if line == 2 {
-				fmt.Printf("%s\n", row[:10]) // print first 10 characters of the second row
+				dates = append(dates, row[:10]) // track first 10 characters of the second row as date
 			}
 			writer.WriteString(row + "\n")
 		}
 		f.Close()
-		
+
 		if err := scanner.Err(); err != nil {
-			return fmt.Errorf("error reading file %s: %w", file, err)
+			return nil, fmt.Errorf("error reading file %s: %w", file, err)
 		}
 	}
-	
-	return nil
+
+	return dates, nil
 }
 
 func (m *CSVMerger) readFirstDate(file string) string {

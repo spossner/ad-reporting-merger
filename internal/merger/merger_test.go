@@ -40,8 +40,9 @@ func TestMergeFiles(t *testing.T) {
 	merger := NewCSVMerger()
 
 	t.Run("merge files", func(t *testing.T) {
-		err = merger.MergeFiles([]string{file1, file2, file3}, output)
+		dates, err := merger.MergeFiles([]string{file1, file2, file3}, output)
 		require.NoError(t, err)
+		require.Len(t, dates, 3)
 
 		// Read output file
 		outputContent, err := os.ReadFile(output)
@@ -59,13 +60,16 @@ func TestMergeFiles(t *testing.T) {
 	})
 
 	t.Run("empty file list", func(t *testing.T) {
-		err = merger.MergeFiles([]string{}, output)
+		dates, err := merger.MergeFiles([]string{}, output)
 		assert.Error(t, err, "Expected error for empty file list")
+		assert.Nil(t, dates, "Expected nil dates for empty file list")
+
 	})
 
 	t.Run("nonexistent file", func(t *testing.T) {
-		err = merger.MergeFiles([]string{"nonexistent.csv"}, output)
+		dates, err := merger.MergeFiles([]string{"nonexistent.csv"}, output)
 		assert.Error(t, err, "Expected error for nonexistent file")
+		assert.Nil(t, dates, "Expected nil dates for nonexistent file")
 	})
 }
 
